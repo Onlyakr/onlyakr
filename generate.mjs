@@ -7,20 +7,23 @@ const CARD = (s) => [
   { header: `${LOGIN}@github` },
   { key: "OS", value: "macOS" },
   { key: "Uptime", value: s.uptime },
-  { key: "Expertise", value: "Full Stack (Intern)" },
-  { key: "Projects", value: "ez-fleet, Yuen" },
-  { key: "IDE", value: "VS Code" },
+  { key: "Expertise", value: "Full Stack" },
+  // { key: "Projects", value: "ez-fleet, Yuen" },
+  { key: "IDE", value: "Zed" },
+  { key: "Tools", value: "Claude Code" },
   {},
-  { key: "Languages.Programming", value: "TypeScript, JavaScript, SQL" },
+  { key: "Languages.Programming", value: "TypeScript, JavaScript" },
   { key: "Languages.Real", value: "Thai, English" },
   {},
+  { header: "Quote" },
+  { text: "Talk is cheap. Show me the code. ~ Linus Torvalds" },
+  {},
   { header: "Contact" },
-  { key: "Email", value: "onlyakr2477@gmail.com" },
   { key: "GitHub", value: `github.com/${LOGIN}` },
   {},
   { header: "GitHub Stats" },
-  { key: "Repos", value: `${s.repos} | Stars: ${s.stars}` },
-  { key: "Commits", value: `${s.commits} | Followers: ${s.followers}` },
+  { key: "Repos", value: `${s.repos} | Commits: ${s.commits}` },
+  { key: "Followers", value: `${s.followers}` },
 ];
 
 // ── fetch stats ───────────────────────────────────────────────────────
@@ -41,8 +44,8 @@ async function gql(query) {
 const { user } = await gql(`query { user(login: "${LOGIN}") {
   createdAt
   followers { totalCount }
-  repositories(ownerAffiliations: OWNER, first: 100) { totalCount nodes { stargazerCount } }
-}}`); // ponytail: stars นับแค่ 100 repos แรก — paginate เมื่อ repos เกิน 100
+  repositories(ownerAffiliations: OWNER) { totalCount }
+}}`);
 
 // commits ทั้งชีวิต: contributionsCollection จำกัดช่วง 1 ปี → alias query ทีละปีในครั้งเดียว
 const startYear = new Date(user.createdAt).getUTCFullYear();
@@ -59,7 +62,6 @@ const commits = years.reduce((sum, y) => {
 const days = Math.floor((Date.now() - new Date(user.createdAt)) / 86400000);
 const stats = {
   repos: user.repositories.totalCount,
-  stars: user.repositories.nodes.reduce((s, r) => s + r.stargazerCount, 0),
   commits: commits.toLocaleString("en-US"),
   followers: user.followers.totalCount,
   uptime: `${Math.floor(days / 365)} years, ${Math.floor((days % 365) / 30)} months, ${(days % 365) % 30} days`,
@@ -70,8 +72,9 @@ const W = 58; // ความกว้าง card เป็นตัวอัก
 const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const THEMES = {
-  dark: { fg: "#e6edf3", key: "#ffa657", dim: "#8b949e", header: "#ff7b72" },
-  light: { fg: "#1f2328", key: "#e36209", dim: "#6e7781", header: "#cf222e" },
+  // โทนตามตัวอย่าง BroKarim: key แดงส้ม, header/เส้น เทา, value ตาม theme
+  dark: { fg: "#e6edf3", key: "#ff7b72", dim: "#8b949e", header: "#8b949e" },
+  light: { fg: "#1f2328", key: "#e5534b", dim: "#6e7781", header: "#6e7781" },
 };
 
 function render(theme) {
@@ -81,6 +84,7 @@ function render(theme) {
       const bar = "─".repeat(W - row.header.length - 4);
       return `<tspan fill="${c.header}">${esc(row.header)}</tspan> <tspan fill="${c.dim}">${bar}</tspan>`;
     }
+    if (row.text) return `<tspan fill="${c.fg}">${esc(row.text)}</tspan>`;
     if (!row.key) return " "; // บรรทัดว่าง
     const used = 2 + row.key.length + 2 + 1 + row.value.length; // ". key: " + " " + value
     const dots = ".".repeat(Math.max(1, W - used));
@@ -96,4 +100,4 @@ ${lines.map((l, i) => `<text x="${pad}" y="${pad + (i + 1) * lineH - 6}" fill="$
 
 import { writeFileSync } from "node:fs";
 for (const theme of Object.keys(THEMES)) writeFileSync(`card-${theme}.svg`, render(theme));
-console.log(`✓ card-dark.svg / card-light.svg — repos:${stats.repos} stars:${stats.stars} commits:${stats.commits} followers:${stats.followers}`);
+console.log(`✓ card-dark.svg / card-light.svg — repos:${stats.repos} commits:${stats.commits} followers:${stats.followers}`);
